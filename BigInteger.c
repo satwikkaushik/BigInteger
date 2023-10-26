@@ -181,32 +181,31 @@ struct BigInteger sub(struct BigInteger list1, struct BigInteger list2){
     short int borrow = 0;
     
     while(itr1 != NULL){
-        short int diff = 0;
-        short digit1 = (itr1 != NULL) ? (itr1->data - borrow) : 0;
-        short digit2 = (itr2 != NULL) ? itr2->data : 0;
+        int diff = 0;
+        int digit1 = (itr1 != NULL) ? itr1->data : 0;
+        int digit2 = (itr2 != NULL) ? itr2->data : 0;
 
-        // handling cases for borrow and difference
-        if(digit1 > digit2){
-            diff = digit1 - digit2;
-            borrow = 0;
+        if (borrow == 1) {
+            digit1 -= 1;
+            borrow = 0; 
         }
-        else if(digit1 < digit2){
-            diff = (digit1 + 10) - digit2;
+
+        if (digit1 < digit2) {
+            digit1 += 10;
             borrow = 1;
         }
-        else{
-            diff = 0;
-            borrow = 0;
-        }
 
+        diff = digit1 - digit2;
         insertAtHead(newBig, diff);
-        itr1 = (itr1 != NULL) ? itr1->prev : NULL;
-        itr2 = (itr2 != NULL) ? itr2->prev : NULL;
+
+        itr1 = itr1->prev;
+        if (itr2 != NULL) {
+            itr2 = itr2->prev;
+        }
     }
+
     newBig->sign = list2.sign;
-
     removeZeroes(newBig);
-
     return *newBig;
 }
 
@@ -276,6 +275,8 @@ struct BigInteger mul(struct BigInteger list1, struct BigInteger list2) {
 
         // finally adding to the main list
         *newBig = add(*newBig, tmp);
+        // recalculating length
+        newBig->length = calculateLength(newBig);
 
         list2.tail = list2.tail->prev;
         trailing_zeroes += 1;
@@ -288,9 +289,9 @@ struct BigInteger mul(struct BigInteger list1, struct BigInteger list2) {
 struct BigInteger div1(struct BigInteger list1, struct BigInteger list2){
 
     // required variables
-    struct BigInteger ans=initialize("");
-    struct BigInteger quotient=initialize("0");
-    struct BigInteger temp=initialize("1");
+    struct BigInteger ans = initialize("");
+    struct BigInteger quotient = initialize("0");
+    struct BigInteger one = initialize("1");
     
     // handling sign
     char keep_sign = '+';
@@ -298,39 +299,90 @@ struct BigInteger div1(struct BigInteger list1, struct BigInteger list2){
         keep_sign = '-';
     }
 
+    // for the sake of simplicity
     list1.sign = list2.sign = '+';
 
-    if(compareForMag(list2,temp) == 0){
+    // div by 1
+    if(compareForMag(list2, one) == 0){
         list1.sign = keep_sign;
         return list1;
     }
 
-    if(compareForMag(list1, quotient) == 0){
+    // div by zero
+    else if(compareForMag(list1, quotient) == 0){
         return quotient;
     }
 
-    if(compareForMag(list2, quotient) == 0){
+    // div by zero
+    else if(compareForMag(list2, quotient) == 0){
         return ans;
     }
 
-    if(compareForMag(list1, list2) == -1){
+    // div by greater number
+    else if(compareForMag(list1, list2) == -1){
         return quotient;
     }
 
-    if(compareForMag(list1, list2) == 0){
-        return temp;
+    // div by same number
+    else if(compareForMag(list1, list2) == 0){
+        return one;
     }
 
-    ans = list1;
-    
-    while(compareForMag(ans, list2) != -1){
-        ans=sub(ans, list2);
-        quotient=add(quotient, temp);
+    // div greater by smaller
+    else{
+        ans = list1;
+        
+        while(compareForMag(ans, list2) != -1){
+            ans = sub(ans, list2);
+            quotient = add(quotient, one);
+        }
+        
+        quotient.sign = keep_sign;
+        return quotient;
     }
-    
-    quotient.sign = keep_sign;
-    return quotient;
+
+    return ans;
 }
+
+struct BigInteger mod(struct BigInteger list1, struct BigInteger list2) {
+    
+    // required variables
+    struct BigInteger zero = initialize("0");
+    struct BigInteger one = initialize("1");
+    struct BigInteger nothing = initialize("");
+
+    // mod by same number
+    if(compareForMag(list1, list2) == 0){
+        return nothing;
+    }
+
+    // mod by greater number
+    else if(compareForMag(list1, list2) == -1){
+        return list1;
+    }
+
+    // mod by zero
+    else if(compareForMag(list1, zero) == 0 || compareForMag(list2, zero) == 0){
+        return zero;
+    }
+
+    // mod by one
+    else if(compareForMag(list2, one) == 0){
+        return zero;
+    }
+
+    // mod of greater by smaller number
+    else{
+        struct BigInteger quotient = div1(list1, list2);
+        struct BigInteger product = mul(quotient, list2);
+        struct BigInteger modulus = sub(list1, product);
+        return modulus;
+    }
+
+    return nothing;
+}
+
+
 
 // --------------- HELPER FUNCTIONS ---------------
 
@@ -431,6 +483,30 @@ void removeZeroes(struct BigInteger *list){
         free(tmp);
     }
 }
+
+void freeBigInteger(struct BigInteger *list)
+{
+    Node *current = list->head;
+    while (current != NULL)
+    {
+        Node *temp = current;
+        current = current->next;
+        free(temp);
+    }
+}
+
+int calculateLength(struct BigInteger *list) {
+    // required variables
+    int len = 0;
+    Node *current = list->head;
+
+    while (current != NULL) {
+        len++;
+        current = current->next;
+    }
+    return len;
+}
+
 
 // -------------------- DISPLAY ----------------------
 
