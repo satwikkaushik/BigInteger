@@ -27,6 +27,8 @@ void insertAtTail(struct BigInteger *list, int val);
 
 int compareForMag(struct BigInteger list1, struct BigInteger list2);
 void removeZeroes(struct BigInteger *list);
+void freeBigInteger(struct BigInteger *list);
+int calculateLength(struct BigInteger *list);
 
 void display(struct BigInteger list);
 
